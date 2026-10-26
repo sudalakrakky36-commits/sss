@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pawy Bakery 3D · ร้อยละกับการคำนวณส่วนลด (คณิตศาสตร์ ม.1)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#4a3525;
+  --brown:#795548;
+  --pink:#ff8fab;
+  --pink-deep:#f2668b;
+  --pink-soft:#ffd6e0;
+  --cream:#fff6e8;
+  --mint:#b8e6c9;
+  --mint-deep:#2f9e6b;
+  --yellow:#ffe27a;
+  --lav:#e6defa;
+  --glass:rgba(255,255,255,.66);
+  --glass-strong:rgba(255,255,255,.86);
+  --line:rgba(121,85,72,.18);
+  --shadow:0 18px 50px rgba(121,85,72,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Kanit','Noto Sans Thai',system-ui,sans-serif;
+  color:var(--ink);
+  background:linear-gradient(135deg,#ffe3ec 0%,#fff1e0 45%,#e8e0ff 100%);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:none}
+#app{
+  height:100vh;height:100dvh;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 440px;
+  gap:14px;
+  padding:14px;
+}
+#stage{
+  position:relative;
+  overflow:hidden;
+  border-radius:30px;
+  background:radial-gradient(circle at 50% 28%,#fffafc 0%,#ffdce8 52%,#e6dcff 100%);
+  box-shadow:var(--shadow);
+  border:2px solid rgba(255,255,255,.9);
+  min-height:0;
+}
+#gl{display:block;width:100%;height:100%;touch-action:none;outline:none}
+#loading{
+  position:absolute;inset:0;display:grid;place-items:center;text-align:center;
+  background:linear-gradient(135deg,#fff0f5,#f1e9ff);
+  z-index:30;transition:opacity .6s ease,visibility .6s ease;
+  font-weight:500;color:var(--brown);padding:24px;
+}
+#loading.done{opacity:0;visibility:hidden}
+#loading .spin{
+  width:56px;height:56px;margin:0 auto 14px;border-radius:50%;
+  border:5px solid var(--pink-soft);border-top-color:var(--pink-deep);
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.glass{
+  background:var(--glass);
+  backdrop-filter:blur(16px) saturate(1.4);
+  -webkit-backdrop-filter:blur(16px) saturate(1.4);
+  border:1.5px solid rgba(255,255,255,.85);
+  box-shadow:0 8px 28px rgba(121,85,72,.14);
+}
+#badge{
+  position:absolute;left:16px;top:16px;z-index:5;
+  padding:8px 16px 8px 10px;border-radius:999px;
+  display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;
+}
+#badge .dot{
+  width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--pink),#ffb77a);font-size:16px;
+}
+#badge small{display:block;font-weight:400;font-size:11px;color:var(--brown);margin-top:-2px}
+#tools{
+  position:absolute;right:16px;top:16px;z-index:5;
+  display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;
+}
+.tool{
+  padding:9px 14px;border-radius:14px;font-size:13px;font-weight:500;
+  display:flex;align-items:center;gap:6px;transition:transform .2s ease,background .2s ease;
+}
+.tool:hover{transform:translateY(-2px);background:var(--glass-strong)}
+.tool.on{background:linear-gradient(135deg,var(--pink-soft),#fff0b8);border-color:var(--pink)}
+#hint{
+  position:absolute;left:16px;bottom:14px;z-index:4;
+  padding:8px 14px;border-radius:14px;font-size:12px;color:var(--brown);
+  display:flex;gap:12px;flex-wrap:wrap;pointer-events:none;
+}
+#hint b{font-weight:600;color:var(--ink)}
+#hotspots{position:absolute;inset:0;pointer-events:none;z-index:6;overflow:hidden}
+.hs{
+  position:absolute;left:0;top:0;width:40px;height:40px;border-radius:50%;
+  display:grid;place-items:center;font-size:19px;pointer-events:auto;
+  background:var(--glass-strong);border:2.5px solid var(--pink);
+  box-shadow:0 6px 18px rgba(242,102,139,.35);
+  will-change:transform;
+  transition:background .25s ease,border-color .25s ease;
+}
+.hs::before{
+  content:"";position:absolute;inset:-6px;border-radius:50%;
+  border:2px solid var(--pink);opacity:.7;
+  animation:pulse 1.8s ease-out infinite;
+}
+@keyframes pulse{
+  0%{transform:scale(.8);opacity:.8}
+  100%{transform:scale(1.6);opacity:0}
+}
+.hs .lbl{
+  position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  white-space:nowrap;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:500;
+  background:var(--ink);color:#fff;opacity:0;transition:opacity .2s ease;pointer-events:none;
+}
+.hs:hover .lbl,.hs.on .lbl{opacity:1}
+.hs.on{background:var(--pink);border-color:#fff}
+.hs.hide{display:none}
+#card{
+  position:absolute;left:16px;bottom:58px;z-index:10;
+  width:min(380px,calc(100% - 32px));
+  opacity:0;visibility:hidden;transform:translateY(24px) scale(.94);
+  transition:opacity .35s ease,transform .45s cubic-bezier(.2,1.2,.3,1),visibility .35s;
+}
+#card.show{opacity:1;visibility:visible;transform:none}
+.card-in{
+  border-radius:24px;padding:16px 18px 16px;
+  background:var(--glass-strong);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border:2px solid #fff;box-shadow:0 18px 44px rgba(121,85,72,.28);
+  position:relative;overflow:hidden;
+}
+.card-in::before{
+  content:"";position:absolute;left:0;top:0;right:0;height:6px;
+  background:linear-gradient(90deg,var(--pink),#ffb77a,var(--yellow),var(--mint));
+}
+.card-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding-top:4px}
+#cIcon{
+  width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:21px;
+  background:linear-gradient(135deg,var(--pink-soft),var(--cream));
+}
+#cTitle{font-size:16px;font-weight:600;flex:1;line-height:1.25}
+#cClose{
+  width:30px;height:30px;border-radius:50%;background:rgba(121,85,72,.1);font-size:13px;
+  transition:background .2s ease,transform .2s ease;
+}
+#cClose:hover{background:var(--pink-soft);transform:rotate(90deg)}
+#cBody{font-size:13.5px;line-height:1.65;color:#5b4637}
+#cBody b{color:var(--ink);font-weight:600}
+#cBody .eq{
+  margin:8px 0 2px;padding:8px 12px;border-radius:12px;background:var(--cream);
+  border:1px dashed var(--brown);font-size:13px;font-family:'Kanit',monospace;
+}
+#cAct{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+#cAct:empty{display:none}
+.btn{
+  padding:9px 16px;border-radius:14px;font-size:13px;font-weight:600;
+  background:linear-gradient(135deg,var(--pink),#ff9d7a);color:#fff;
+  box-shadow:0 6px 16px rgba(242,102,139,.35);transition:transform .2s ease,box-shadow .2s ease;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(242,102,139,.42)}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:var(--glass-strong);color:var(--ink);border:1.5px solid var(--line);box-shadow:none}
+#panel{
+  display:flex;flex-direction:column;min-height:0;overflow:hidden;
+  border-radius:30px;
+  background:var(--glass);
+  backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);
+  border:2px solid rgba(255,255,255,.9);box-shadow:var(--shadow);
+}
+.panel-head{display:flex;align-items:center;gap:12px;padding:18px 20px 10px}
+.logo{
+  width:48px;height:48px;border-radius:16px;display:grid;place-items:center;font-size:26px;
+  background:linear-gradient(135deg,var(--pink-soft),#fff0b8);border:2px solid #fff;
+  box-shadow:0 6px 16px rgba(242,102,139,.25);animation:wob 3.2s ease-in-out infinite;
+}
+@keyframes wob{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg) translateY(-2px)}}
+.panel-head h1{font-size:20px;font-weight:700;line-height:1.15}
+.panel-head p{font-size:12px;color:var(--brown)}
+.tabs{display:flex;gap:6px;padding:6px 14px 10px}
+.tab{
+  flex:1;padding:10px 6px;border-radius:14px;font-size:13.5px;font-weight:500;
+  color:var(--brown);transition:all .25s ease;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.tab:hover{background:rgba(255,255,255,.7)}
+.tab[aria-selected="true"]{
+  background:linear-gradient(135deg,var(--pink),#ff9d7a);color:#fff;font-weight:600;
+  box-shadow:0 6px 16px rgba(242,102,139,.35);
+}
+.panel-body{flex:1;overflow-y:auto;padding:4px 18px 22px;scrollbar-width:thin;scrollbar-color:var(--pink-soft) transparent}
+.panel-body::-webkit-scrollbar{width:8px}
+.panel-body::-webkit-scrollbar-thumb{background:var(--pink-soft);border-radius:8px}
+.pane{display:none;animation:paneIn .45s cubic-bezier(.2,.9,.3,1)}
+.pane.active{display:block}
+@keyframes paneIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.bear-say{
+  display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:20px;
+  background:linear-gradient(135deg,#fff6e8,#ffe9f0);border:1.5px solid #fff;margin-bottom:14px;
+}
+.bear-face{
+  flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:25px;
+  background:#fff;border:2px solid var(--brown);
+}
+.bear-say p{font-size:13px;line-height:1.55;color:#5b4637}
+.bear-say p b{color:var(--pink-deep)}
+.gt{font-size:12px;font-weight:600;color:var(--brown);letter-spacing:.02em;margin:14px 0 8px}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.chip{
+  padding:10px 4px 8px;border-radius:18px;background:rgba(255,255,255,.75);
+  border:2px solid transparent;font-size:12.5px;font-weight:500;
+  display:flex;flex-direction:column;align-items:center;gap:2px;transition:all .25s ease;
+}
+.chip span{font-size:28px;transition:transform .3s ease}
+.chip:hover span{transform:scale(1.2) rotate(-6deg)}
+.chip.active{border-color:var(--pink);background:#fff;box-shadow:0 8px 20px rgba(242,102,139,.22)}
+.ctl{padding:12px 14px;border-radius:20px;background:rgba(255,255,255,.7);margin-bottom:10px}
+.ctl-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
+.ctl-top label{font-size:13.5px;font-weight:600}
+.val{
+  padding:3px 12px;border-radius:12px;font-weight:700;font-size:16px;
+  background:var(--cream);border:2px solid var(--brown);white-space:nowrap;
+}
+.val.y{background:var(--yellow)}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:20px;background:transparent;outline:none;--fill:50%;
+}
+input[type=range]::-webkit-slider-runnable-track{
+  height:12px;border-radius:12px;border:2px solid var(--brown);
+  background:linear-gradient(to right,var(--pink) var(--fill),#ffe9c9 var(--fill));
+}
+input[type=range]::-moz-range-track{height:8px;border-radius:12px;border:2px solid var(--brown);background:#ffe9c9}
+input[type=range]::-moz-range-progress{height:8px;border-radius:12px;background:var(--pink)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:28px;height:28px;border-radius:50%;margin-top:-9px;
+  background:#fff;border:3px solid var(--pink-deep);box-shadow:0 4px 10px rgba(0,0,0,.18);
+  transition:transform .15s ease;
+}
+input[type=range]::-moz-range-thumb{
+  width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--pink-deep);
+}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.15)}
+.ticks{display:flex;justify-content:space-between;font-size:11px;color:#9a8478;font-weight:500;margin-top:2px}
+.presets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.preset{
+  padding:9px 4px;border-radius:14px;background:rgba(255,255,255,.8);border:1.5px solid var(--line);
+  font-size:12.5px;font-weight:500;transition:all .2s ease;
+}
+.preset:hover{background:#fff;border-color:var(--pink);transform:translateY(-2px)}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.res-card{padding:12px 8px;border-radius:20px;text-align:center;background:#fff;border:2.5px solid}
+.res-card.save{border-color:#ffb3c6}
+.res-card.paid{border-color:#8fd9ae}
+.res-card .k{display:block;font-size:11.5px;color:#8a766a;font-weight:500}
+.res-card b{font-size:25px;font-weight:700;line-height:1.2}
+.res-card.save b,.res-card.save i{color:#ec5f84}
+.res-card.paid b,.res-card.paid i{color:var(--mint-deep)}
+.res-card i{font-style:normal;font-size:12px;font-weight:600;margin-left:3px}
+.bar{
+  margin-top:12px;height:38px;border-radius:14px;overflow:hidden;display:flex;
+  border:2px solid var(--brown);background:#eee;
+}
+.seg{
+  height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;
+  transition:width .5s cubic-bezier(.3,1.1,.4,1);overflow:hidden;white-space:nowrap;
+}
+.seg.paid{background:var(--mint);color:#1d6b48}
+.seg.disc{background:var(--pink-soft);color:#b8335a}
+.bar-note{margin-top:8px;font-size:12px;color:#8a766a;text-align:center}
+.bar-note b{color:var(--ink)}
+.step{padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.75);margin-bottom:8px;border:1.5px solid rgba(255,255,255,.9)}
+.step h4{font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.step h4 em{
+  font-style:normal;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+  font-size:12px;background:var(--pink);color:#fff;
+}
+.eq{
+  padding:7px 12px;border-radius:12px;background:var(--cream);border:1px dashed var(--brown);
+  font-size:13px;color:#5b4637;
+}
+.sub{margin-top:6px;font-size:13px;color:#7a665a}
+.sub b{font-weight:700}
+.sub .a{color:#ec5f84}
+.sub .b{color:var(--mint-deep)}
+.sub .c{color:#7b5bd6}
+.lesson{
+  padding:14px 16px;border-radius:22px;background:rgba(255,255,255,.78);margin-bottom:12px;
+  border:1.5px solid #fff;position:relative;overflow:hidden;
+}
+.lesson::after{
+  content:"";position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;
+  background:var(--lc,var(--pink-soft));opacity:.6;
+}
+.lesson h3{font-size:15px;font-weight:600;margin-bottom:6px;display:flex;gap:8px;align-items:center;position:relative;z-index:1}
+.lesson p{font-size:13px;line-height:1.65;color:#5b4637;position:relative;z-index:1}
+.lesson p b{color:var(--ink)}
+.lesson .eq{margin:8px 0;position:relative;z-index:1}
+.lesson .btn{margin-top:6px;position:relative;z-index:1}
+.q-prog{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.q-dots{display:flex;gap:6px;flex:1}
+.q-dots i{flex:1;height:8px;border-radius:8px;background:rgba(121,85,72,.15);transition:background .3s ease}
+.q-dots i.cur{background:var(--yellow);box-shadow:0 0 0 2px var(--brown) inset}
+.q-dots i.ok{background:var(--mint)}
+.q-dots i.no{background:#ffb3c6}
+.q-count{font-size:12.5px;font-weight:600;color:var(--brown)}
+.q-text{
+  padding:14px 16px;border-radius:20px;background:#fff;font-size:14.5px;line-height:1.7;
+  font-weight:500;border:2px solid var(--pink-soft);margin-bottom:12px;
+}
+.q-text b{color:var(--pink-deep)}
+.opts{display:grid;gap:8px}
+.opt{
+  display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:16px;text-align:left;
+  background:rgba(255,255,255,.85);border:2px solid var(--line);font-size:14px;font-weight:500;
+  transition:all .2s ease;
+}
+.opt:hover:not(:disabled){border-color:var(--pink);transform:translateX(4px);background:#fff}
+.opt .l{
+  width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:var(--cream);border:1.5px solid var(--brown);font-size:13px;font-weight:600;
+}
+.opt.ok{background:#e6f8ee;border-color:#52c08a}
+.opt.ok .l{background:#52c08a;color:#fff;border-color:#52c08a}
+.opt.no{background:#ffe9ee;border-color:#ff8fab;animation:shake .4s}
+.opt.no .l{background:#ff8fab;color:#fff;border-color:#ff8fab}
+.opt:disabled{cursor:default}
+@keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+.fb{
+  margin-top:12px;padding:12px 14px;border-radius:18px;font-size:13px;line-height:1.7;
+  animation:paneIn .4s ease;
+}
+.fb.ok{background:#e6f8ee;border:2px solid #9fe0bd}
+.fb.no{background:#fff0f3;border:2px solid #ffc2d1}
+.fb h4{font-size:14px;margin-bottom:4px}
+.fb-act{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.result{text-align:center;padding:10px 0}
+.result .big{font-size:64px;line-height:1.1;animation:bounce 1.6s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.result h3{font-size:22px;margin:8px 0 2px}
+.result .score{font-size:44px;font-weight:700;color:var(--pink-deep)}
+.result p{font-size:13.5px;color:#7a665a;margin:6px 0 14px}
+.confetti{
+  position:fixed;top:-30px;z-index:100;pointer-events:none;font-size:24px;
+  animation:fall linear forwards;
+}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.9}}
+@media (max-width:1100px){
+  #app{grid-template-columns:1fr;grid-template-rows:minmax(0,46%) minmax(0,1fr);gap:10px;padding:10px}
+  #panel,#stage{border-radius:24px}
+  #hint{display:none}
+  #card{bottom:12px}
+  .badge small{display:none}
+}
+@media (max-width:640px){
+  #badge{display:none}
+  .tool{padding:8px 11px;font-size:12px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="stage">
+    <canvas id="gl"></canvas>
+    <div id="loading"><div><div class="spin"></div><p>กำลังอบฉาก 3D ให้พร้อม... 🧁</p><p style="font-size:12px;font-weight:300;margin-top:6px">ต้องเชื่อมต่ออินเทอร์เน็ตเพื่อโหลด Three.js</p></div></div>
+    <div id="badge" class="glass"><div class="dot">🧁</div><div>สื่อ 3D Interactive<small>ร้อยละกับร้านเบเกอรี่ · คณิตศาสตร์ ม.1</small></div></div>
+    <div id="tools">
+      <button class="tool glass" id="btnSpin" type="button">🔄 หมุนอัตโนมัติ</button>
+      <button class="tool glass" id="btnReset" type="button">🎯 รีเซ็ตมุมกล้อง</button>
+    </div>
+    <div id="hotspots"></div>
+    <div id="card" role="dialog" aria-live="polite">
+      <div class="card-in">
+        <div class="card-top"><div id="cIcon">💡</div><h3 id="cTitle"></h3><button id="cClose" type="button" aria-label="ปิดการ์ด">✕</button></div>
+        <div id="cBody"></div>
+        <div id="cAct"></div>
+      </div>
+    </div>
+    <div id="hint" class="glass"><span><b>คลิกซ้าย + ลาก</b> หมุน</span><span><b>คลิกขวา + ลาก</b> แพน</span><span><b>ล้อเมาส์</b> ซูม</span><span><b>คลิกชิ้นขนม / จุด</b> ดูคำอธิบาย</span></div>
+  </section>
+
+  <aside id="panel">
+    <div class="panel-head">
+      <div class="logo">🐻</div>
+      <div><h1>Pawy Bakery 3D</h1><p>ร้อยละกับการคำนวณส่วนลด · คณิตศาสตร์ ม.1</p></div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="lab" aria-selected="true" type="button">🧪 ห้องทดลอง</button>
+      <button class="tab" role="tab" data-tab="lesson" aria-selected="false" type="button">📖 สูตร</button>
+      <button class="tab" role="tab" data-tab="quiz" aria-selected="false" type="button">📝 แบบทดสอบ</button>
+    </nav>
+
+    <div class="panel-body">
+      <section class="pane active" id="pane-lab">
+        <div class="bear-say"><div class="bear-face">🐻</div><p id="bearSay"></p></div>
+
+        <div class="gt">🍰 เลือกขนม (เปลี่ยนวัตถุในฉาก 3D)</div>
+        <div class="chips" id="chips">
+          <button class="chip active" data-p="cake" type="button"><span>🎂</span>เค้กส้ม</button>
+          <button class="chip" data-p="cupcake" type="button"><span>🧁</span>คัพเค้ก</button>
+          <button class="chip" data-p="donut" type="button"><span>🍩</span>โดนัท</button>
+        </div>
+
+        <div class="gt">🎚️ ปรับตัวแปร</div>
+        <div class="ctl">
+          <div class="ctl-top"><label for="priceRange">🏷️ ตัวแปร 1: ราคาสินค้าเดิม</label><span class="val"><span id="priceVal">200</span> บาท</span></div>
+          <input type="range" id="priceRange" min="10" max="1000" step="10" value="200">
+          <div class="ticks"><span>10 ฿</span><span>500 ฿</span><span>1,000 ฿</span></div>
+        </div>
+        <div class="ctl">
+          <div class="ctl-top"><label for="discRange">🎁 ตัวแปร 2: เปอร์เซ็นต์ส่วนลด</label><span class="val y">ลด <span id="discVal">25</span>%</span></div>
+          <input type="range" id="discRange" min="0" max="100" step="5" value="25">
+          <div class="ticks"><span>0% (ไม่ลด)</span><span>50% (ครึ่งราคา)</span><span>100% (ฟรี!)</span></div>
+        </div>
+
+        <div class="gt">⚡ ปุ่มลัดทดลองสถานการณ์</div>
+        <div class="presets">
+          <button class="preset" data-pr="100,10" type="button">ลด 10%</button>
+          <button class="preset" data-pr="500,50" type="button">ลด 50%</button>
+          <button class="preset" data-pr="800,20" type="button">ลด 20%</button>
+        </div>
+
+        <div class="gt">📊 ผลลัพธ์แบบเรียลไทม์</div>
+        <div class="res">
+          <div class="res-card save"><span class="k">ส่วนลดที่ประหยัดได้</span><b id="rDisc" data-v="0">50.00</b><i>บาท</i></div>
+          <div class="res-card paid"><span class="k">ราคาที่ต้องจ่ายจริง</span><b id="rPaid" data-v="0">150.00</b><i>บาท</i></div>
+        </div>
+        <div class="bar"><div class="seg paid" id="barPaid"><span id="barPaidT"></span></div><div class="seg disc" id="barDisc"><span id="barDiscT"></span></div></div>
+        <p class="bar-note">1 ชิ้นในฉาก 3D = <b id="unitPct">5</b>% ของราคา = <b id="unitVal">10</b> บาท</p>
+
+        <div class="gt">💡 ขั้นตอนและสูตรการคำนวณ</div>
+        <div class="step">
+          <h4><em>1</em> หาจำนวนเงินส่วนลด</h4>
+          <div class="eq">ส่วนลด = (ราคาเดิม × %ส่วนลด) ÷ 100</div>
+          <div class="sub">แทนค่า: <b class="a" id="f1v"></b></div>
+        </div>
+        <div class="step">
+          <h4><em>2</em> คำนวณราคาที่ต้องจ่ายจริง</h4>
+          <div class="eq">ราคาจ่ายจริง = ราคาเดิม − ส่วนลด</div>
+          <div class="sub">แทนค่า: <b class="b" id="f2v"></b></div>
+        </div>
+        <div class="step">
+          <h4><em>3</em> ตรวจสอบย้อนกลับ</h4>
+          <div class="eq">%ส่วนลด = (ส่วนลด ÷ ราคาเดิม) × 100</div>
+          <div class="sub">แทนค่า: <b class="c" id="f3v"></b></div>
+        </div>
+      </section>
+
+      <section class="pane" id="pane-lesson">
+        <div class="lesson" style="--lc:#ffd6e0">
+          <h3>🧮 ร้อยละ (เปอร์เซ็นต์) คืออะไร?</h3>
+          <p>ร้อยละ คือการบอกอัตราส่วนเทียบกับ <b>100 ส่วน</b> เช่น 25% หมายถึง 25 ใน 100 ส่วน ในฉาก 3D เค้กหนึ่งก้อนถูกแบ่งเป็น 20 ชิ้น ชิ้นละ <b>5%</b> ถ้าลดราคา 25% จะมีขนม 5 ชิ้นลอยออกมา</p>
+        </div>
+        <div class="lesson" style="--lc:#ffe9a8">
+          <h3>🎁 แบบที่ 1: หาจำนวนเงินส่วนลด</h3>
+          <p>เมื่อรู้ราคาเดิมและเปอร์เซ็นต์ส่วนลด</p>
+          <div class="eq">ส่วนลด = ราคาเดิม × % ÷ 100</div>
+          <p>ตัวอย่าง: ราคา 200 บาท ลด 25% → ส่วนลด = (200 × 25) ÷ 100 = <b>50 บาท</b> จ่ายจริง <b>150 บาท</b></p>
+          <button class="btn" data-scene="200,25" type="button">ดูตัวอย่างในฉาก 3D ➜</button>
+        </div>
+        <div class="lesson" style="--lc:#c9f0d9">
+          <h3>🔎 แบบที่ 2: หาเปอร์เซ็นต์ส่วนลด</h3>
+          <p>เมื่อรู้ราคาเดิมและจำนวนเงินที่ลด</p>
+          <div class="eq">% ส่วนลด = (ส่วนลด ÷ ราคาเดิม) × 100</div>
+          <p>ตัวอย่าง: เค้ก 800 บาท ลด 160 บาท → (160 ÷ 800) × 100 = <b>20%</b></p>
+          <button class="btn" data-scene="800,20" type="button">ดูตัวอย่างในฉาก 3D ➜</button>
+        </div>
+        <div class="lesson" style="--lc:#e6defa">
+          <h3>🕵️ แบบที่ 3: หาราคาเดิมก่อนลด</h3>
+          <p>เมื่อรู้ราคาที่จ่ายจริงและเปอร์เซ็นต์ที่ลด ลด 30% แปลว่าจ่ายเพียง 70% ของราคาเดิม</p>
+          <div class="eq">ราคาเดิม = (ราคาจ่ายจริง × 100) ÷ (100 − %ที่ลด)</div>
+          <p>ตัวอย่าง: จ่าย 350 บาท หลังลด 30% → (350 × 100) ÷ 70 = <b>500 บาท</b></p>
+          <button class="btn" data-scene="500,30" type="button">ดูตัวอย่างในฉาก 3D ➜</button>
+        </div>
+        <div class="lesson" style="--lc:#ffd6e0">
+          <h3>🐻 เคล็ดลับจากพี่หมี</h3>
+          <p>• ลด 50% = ครึ่งราคา • ลด 10% = หารราคาด้วย 10 • ลด 25% = ลดหนึ่งในสี่<br>• ลองคลิกจุดวงกลมเรืองแสงและชิ้นขนมในฉาก 3D เพื่อดูคำอธิบายเพิ่มเติม</p>
+        </div>
+      </section>
+
+      <section class="pane" id="pane-quiz">
+        <div id="quizBox"></div>
+      </section>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  if (typeof THREE === 'undefined' || typeof THREE.OrbitControls === 'undefined') {
+    $('loading').innerHTML = '<div><p style="font-size:42px">😢</p><p>โหลดไลบรารี Three.js ไม่สำเร็จ</p><p style="font-size:12px;font-weight:300;margin-top:6px">กรุณาตรวจสอบอินเทอร์เน็ตแล้วรีเฟรชหน้านี้อีกครั้ง</p></div>';
+    return;
+  }
+
+  var UNITS = 20;
+  var STEP = 100 / UNITS;
+  var STEP_ANGLE = (Math.PI * 2) / UNITS;
+  var GAP = 0.025;
+
+  var PRODUCTS = {
+    cake: { name: 'เค้กส้ม', emoji: '🎂' },
+    cupcake: { name: 'คัพเค้ก', emoji: '🧁' },
+    donut: { name: 'โดนัท', emoji: '🍩' }
+  };
+
+  var state = { product: 'cake', price: 200, discount: 25 };
+
+  function n2(v) { return v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function nf(v) { return (Math.round(v * 100) / 100).toLocaleString('th-TH', { maximumFractionDigits: 2 }); }
+  function calc() {
+    var d = state.price * state.discount / 100;
+    return { d: d, paid: state.price - d, n: Math.round(state.discount / STEP) };
+  }
+  function easeOutBack(x) {
+    var c1 = 1.70158, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+  }
+  function makeCanvas(w, h) {
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    return c;
+  }
+  function rr(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  var stage = $('stage');
+  var canvas = $('gl');
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setClearColor(0x000000, 0);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(42, 1.4, 0.1, 120);
+
+  var controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.07;
+  controls.enablePan = true;
+  controls.screenSpacePanning = true;
+  controls.minDistance = 5;
+  controls.maxDistance = 26;
+  controls.maxPolarAngle = Math.PI * 0.48;
+  controls.minPolarAngle = 0.15;
+  controls.autoRotateSpeed = 1.2;
+  controls.target.set(0, 0.9, 0);
+
+  var hemi = new THREE.HemisphereLight(0xfff4f8, 0xffd0dc, 0.85);
+  scene.add(hemi);
+  var sun = new THREE.DirectionalLight(0xfff0dc, 0.95);
+  sun.position.set(6, 12, 7);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -11;
+  sun.shadow.camera.right = 11;
+  sun.shadow.camera.top = 11;
+  sun.shadow.camera.bottom = -11;
+  sun.shadow.camera.near = 1;
+  sun.shadow.camera.far = 40;
+  sun.shadow.bias = -0.0004;
+  sun.shadow.radius = 4;
+  scene.add(sun);
+  var fill = new THREE.PointLight(0xffb3c6, 0.45, 40);
+  fill.position.set(-7, 5, 5);
+  scene.add(fill);
+  var rim = new THREE.PointLight(0xc9b8ff, 0.35, 40);
+  rim.position.set(6, 4, -7);
+  scene.add(rim);
+
+  var ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(70, 70),
+    new THREE.ShadowMaterial({ opacity: 0.16 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -3.6;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  function makeGingham() {
+    var c = makeCanvas(128, 128);
+    var g = c.getContext('2d');
+    g.fillStyle = '#fffafb';
+    g.fillRect(0, 0, 128, 128);
+    g.fillStyle = 'rgba(255,143,171,0.42)';
+    g.fillRect(0, 0, 64, 128);
+    g.fillRect(0, 0, 128, 64);
+    var t = new THREE.CanvasTexture(c);
+    t.wrapS = THREE.RepeatWrapping;
+    t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(7, 7);
+    t.anisotropy = 8;
+    return t;
+  }
+
+  var tableSide = new THREE.MeshStandardMaterial({ color: 0xffe3ea, roughness: 0.7 });
+  var tableTop = new THREE.MeshStandardMaterial({ map: makeGingham(), roughness: 0.85 });
+  var table = new THREE.Mesh(new THREE.CylinderGeometry(6.4, 6.4, 0.5, 72), [tableSide, tableTop, tableSide]);
+  table.position.y = -0.25;
+  table.receiveShadow = true;
+  table.castShadow = true;
+  scene.add(table);
+
+  var rimTorus = new THREE.Mesh(
+    new THREE.TorusGeometry(6.4, 0.17, 14, 110),
+    new THREE.MeshStandardMaterial({ color: 0xffb7c8, roughness: 0.45 })
+  );
+  rimTorus.rotation.x = Math.PI / 2;
+  rimTorus.position.y = -0.02;
+  rimTorus.castShadow = true;
+  scene.add(rimTorus);
+
+  var pedestal = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.3, 2.3, 3.1, 40),
+    new THREE.MeshStandardMaterial({ color: 0xf0c9a8, roughness: 0.7 })
+  );
+  pedestal.position.y = -2.05;
+  pedestal.castShadow = true;
+  pedestal.receiveShadow = true;
+  scene.add(pedestal);
+  var base = new THREE.Mesh(
+    new THREE.CylinderGeometry(3, 3.2, 0.3, 48),
+    new THREE.MeshStandardMaterial({ color: 0xe6b894, roughness: 0.7 })
+  );
+  base.position.y = -3.5;
+  base.receiveShadow = true;
+  scene.add(base);
+
+  var plateMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25 });
+  var plateRound = new THREE.Group();
+  var plateDisc = new THREE.Mesh(new THREE.CylinderGeometry(3.25, 2.9, 0.14, 64), plateMat);
+  plateDisc.position.y = 0.07;
+  plateDisc.castShadow = true;
+  plateDisc.receiveShadow = true;
+  plateRound.add(plateDisc);
+  var plateRing = new THREE.Mesh(new THREE.TorusGeometry(3.12, 0.05, 10, 80), new THREE.MeshStandardMaterial({ color: 0xffb7c8, roughness: 0.4 }));
+  plateRing.rotation.x = Math.PI / 2;
+  plateRing.position.y = 0.14;
+  plateRound.add(plateRing);
+  scene.add(plateRound);
+
+  var plateTray = new THREE.Group();
+  var trayBase = new THREE.Mesh(new THREE.BoxGeometry(5.9, 0.12, 4.8), new THREE.MeshStandardMaterial({ color: 0xffc9d6, roughness: 0.5 }));
+  trayBase.position.y = 0.06;
+  trayBase.castShadow = true;
+  trayBase.receiveShadow = true;
+  plateTray.add(trayBase);
+  var trayTop = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.14, 4.5), plateMat);
+  trayTop.position.y = 0.07;
+  trayTop.castShadow = true;
+  trayTop.receiveShadow = true;
+  plateTray.add(trayTop);
+  plateTray.visible = false;
+  scene.add(plateTray);
+
+  var signCanvas = makeCanvas(768, 512);
+  var signCtx = signCanvas.getContext('2d');
+  var signTex = new THREE.CanvasTexture(signCanvas);
+  signTex.anisotropy = 8;
+
+  function drawSign() {
+    var c = signCtx, W = 768, H = 512;
+    var k = calc();
+    var p = PRODUCTS[state.product];
+    c.clearRect(0, 0, W, H);
+    c.save();
+    rr(c, 0, 0, W, H, 54);
+    c.clip();
+    var g = c.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#fffdf7');
+    g.addColorStop(1, '#ffeaf0');
+    c.fillStyle = g;
+    c.fillRect(0, 0, W, H);
+    var hg = c.createLinearGradient(0, 0, W, 0);
+    hg.addColorStop(0, '#ff8fab');
+    hg.addColorStop(1, '#ffa77a');
+    c.fillStyle = hg;
+    c.fillRect(0, 0, W, 120);
+    c.restore();
+    c.lineWidth = 12;
+    c.strokeStyle = '#795548';
+    rr(c, 6, 6, W - 12, H - 12, 50);
+    c.stroke();
+    c.textBaseline = 'middle';
+    c.textAlign = 'center';
+    c.fillStyle = '#ffffff';
+    c.font = '700 58px Kanit, "Noto Sans Thai", sans-serif';
+    c.fillText('Pawy Bakery 🐻', W / 2, 62);
+    c.fillStyle = '#795548';
+    c.font = '600 46px Kanit, "Noto Sans Thai", sans-serif';
+    c.fillText(p.emoji + ' ' + p.name, W / 2, 168);
+    c.textAlign = 'left';
+    c.fillStyle = '#9a8478';
+    c.font = '400 34px Kanit, "Noto Sans Thai", sans-serif';
+    c.fillText('ราคาเดิม', 56, 244);
+    c.fillStyle = '#4a3525';
+    c.font = '600 58px Kanit, "Noto Sans Thai", sans-serif';
+    var orig = nf(state.price) + ' บาท';
+    c.fillText(orig, 56, 304);
+    if (state.discount > 0) {
+      var tw = c.measureText(orig).width;
+      c.strokeStyle = '#ec5f84';
+      c.lineWidth = 7;
+      c.beginPath();
+      c.moveTo(48, 306);
+      c.lineTo(64 + tw, 298);
+      c.stroke();
+    }
+    c.fillStyle = '#9a8478';
+    c.font = '400 34px Kanit, "Noto Sans Thai", sans-serif';
+    c.fillText('จ่ายจริง', 56, 378);
+    c.fillStyle = '#2f9e6b';
+    c.font = '700 84px Kanit, "Noto Sans Thai", sans-serif';
+    c.fillText(nf(k.paid), 56, 452);
+    var pw = c.measureText(nf(k.paid)).width;
+    c.font = '600 40px Kanit, "Noto Sans Thai", sans-serif';
+    c.fillText('บาท', 70 + pw, 462);
+    c.beginPath();
+    c.arc(608, 300, 96, 0, Math.PI * 2);
+    c.fillStyle = '#ffe27a';
+    c.fill();
+    c.lineWidth = 8;
+    c.strokeStyle = '#795548';
+    c.stroke();
+    c.textAlign = 'center';
+    c.fillStyle = '#4a3525';
+    c.font = '500 36px Kanit, "Noto Sans Thai", sans-serif';
+    c.fillText('ลด', 608, 258);
+    c.fillStyle = '#d6336c';
+    c.font = '700 70px Kanit, "Noto Sans Thai", sans-serif';
+    c.fillText(state.discount + '%', 608, 322);
+    signTex.needsUpdate = true;
+  }
+
+  var signGroup = new THREE.Group();
+  var postMat = new THREE.MeshStandardMaterial({ color: 0x9c6b4e, roughness: 0.65 });
+  [-1.35, 1.35].forEach(function (x) {
+    var post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 2.2, 14), postMat);
+    post.position.set(x, 1.1, 0);
+    post.castShadow = true;
+    signGroup.add(post);
+  });
+  var frame = new THREE.Mesh(new THREE.BoxGeometry(3.9, 2.7, 0.14), new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.6 }));
+  frame.position.set(0, 3.1, 0);
+  frame.castShadow = true;
+  signGroup.add(frame);
+  var signMat = new THREE.MeshBasicMaterial({ map: signTex, transparent: true });
+  var signFront = new THREE.Mesh(new THREE.PlaneGeometry(3.7, 2.467), signMat);
+  signFront.position.set(0, 3.1, 0.08);
+  signGroup.add(signFront);
+  var signBack = new THREE.Mesh(new THREE.PlaneGeometry(3.7, 2.467), signMat);
+  signBack.position.set(0, 3.1, -0.08);
+  signBack.rotation.y = Math.PI;
+  signGroup.add(signBack);
+  signGroup.position.set(-5.0, 0, 2.7);
+  signGroup.rotation.y = 0.5;
+  scene.add(signGroup);
+
+  var bearMeshes = [];
+  var bear = new THREE.Group();
+  function bmat(color, rough) { return new THREE.MeshStandardMaterial({ color: color, roughness: rough == null ? 0.7 : rough }); }
+  function bpart(geom, material, x, y, z, sx, sy, sz, parent) {
+    var m = new THREE.Mesh(geom, material);
+    m.position.set(x, y, z);
+    if (sx !== undefined) m.scale.set(sx, sy, sz);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    m.userData.bear = true;
+    bearMeshes.push(m);
+    (parent || bear).add(m);
+    return m;
+  }
+  var fur = bmat(0xcd853f, 0.85);
+  var furDark = bmat(0xa0522d, 0.85);
+  var creamM = bmat(0xfff2d9, 0.8);
+  var inkM = bmat(0x3a2618, 0.4);
+  var pinkM = bmat(0xff9fb8, 0.6);
+  var whiteM = bmat(0xffffff, 0.6);
+  var sph = new THREE.SphereGeometry(1, 28, 20);
+  bpart(sph, fur, 0, 1.05, 0, 0.85, 0.95, 0.8);
+  bpart(sph, creamM, 0, 1.0, 0.45, 0.55, 0.65, 0.4);
+  bpart(sph, pinkM, 0, 0.95, 0.62, 0.62, 0.7, 0.18);
+  bpart(sph, fur, -0.4, 0.15, 0.2, 0.32, 0.22, 0.42);
+  bpart(sph, fur, 0.4, 0.15, 0.2, 0.32, 0.22, 0.42);
+  bpart(sph, fur, 0, 2.45, 0, 0.78, 0.72, 0.72);
+  bpart(sph, furDark, -0.55, 3.05, 0, 0.27, 0.27, 0.2);
+  bpart(sph, furDark, 0.55, 3.05, 0, 0.27, 0.27, 0.2);
+  bpart(sph, pinkM, -0.55, 3.05, 0.1, 0.15, 0.15, 0.1);
+  bpart(sph, pinkM, 0.55, 3.05, 0.1, 0.15, 0.15, 0.1);
+  bpart(sph, creamM, 0, 2.3, 0.55, 0.34, 0.26, 0.26);
+  bpart(sph, inkM, 0, 2.4, 0.78, 0.12, 0.08, 0.08);
+  bpart(sph, inkM, -0.27, 2.6, 0.62, 0.075, 0.095, 0.06);
+  bpart(sph, inkM, 0.27, 2.6, 0.62, 0.075, 0.095, 0.06);
+  bpart(sph, pinkM, -0.46, 2.38, 0.55, 0.11, 0.07, 0.04);
+  bpart(sph, pinkM, 0.46, 2.38, 0.55, 0.11, 0.07, 0.04);
+  var hatBand = bpart(new THREE.CylinderGeometry(0.58, 0.6, 0.3, 28), whiteM, 0, 3.12, 0);
+  bpart(sph, whiteM, 0, 3.55, 0, 0.62, 0.45, 0.62);
+  bpart(sph, whiteM, -0.35, 3.45, 0, 0.36, 0.33, 0.36);
+  bpart(sph, whiteM, 0.35, 3.45, 0, 0.36, 0.33, 0.36);
+  var armLPivot = new THREE.Group();
+  armLPivot.position.set(-0.8, 1.55, 0);
+  bear.add(armLPivot);
+  bpart(sph, fur, 0, -0.38, 0, 0.24, 0.5, 0.24, armLPivot);
+  var armRPivot = new THREE.Group();
+  armRPivot.position.set(0.8, 1.55, 0);
+  bear.add(armRPivot);
+  bpart(sph, fur, 0, -0.38, 0, 0.24, 0.5, 0.24, armRPivot);
+  bear.position.set(5.0, 0, 2.9);
+  bear.rotation.y = -0.55;
+  bear.scale.setScalar(0.95);
+  scene.add(bear);
+  hatBand.userData.bear = true;
+
+  var spark = (function () {
+    var count = 140;
+    var pos = new Float32Array(count * 3);
+    var col = new Float32Array(count * 3);
+    var palette = [0xffb7c8, 0xffe27a, 0xb8e6c9, 0xd9c8ff, 0xffc9a3];
+    var cc = new THREE.Color();
+    for (var i = 0; i < count; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var r = 7 + Math.random() * 9;
+      pos[i * 3] = Math.cos(a) * r;
+      pos[i * 3 + 1] = -1 + Math.random() * 11;
+      pos[i * 3 + 2] = Math.sin(a) * r;
+      cc.setHex(palette[i % palette.length]);
+      col[i * 3] = cc.r; col[i * 3 + 1] = cc.g; col[i * 3 + 2] = cc.b;
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    var tc = makeCanvas(64, 64);
+    var tg = tc.getContext('2d');
+    var rg = tg.createRadialGradient(32, 32, 2, 32, 32, 30);
+    rg.addColorStop(0, 'rgba(255,255,255,1)');
+    rg.addColorStop(0.6, 'rgba(255,255,255,0.7)');
+    rg.addColorStop(1, 'rgba(255,255,255,0)');
+    tg.fillStyle = rg;
+    tg.fillRect(0, 0, 64, 64);
+    var pm = new THREE.PointsMaterial({ size: 0.42, map: new THREE.CanvasTexture(tc), vertexColors: true, transparent: true, depthWrite: false, opacity: 0.85 });
+    var pts = new THREE.Points(geo, pm);
+    scene.add(pts);
+    return pts;
+  })();
+
+  var labelTex = (function () {
+    var c = makeCanvas(256, 128);
+    var g = c.getContext('2d');
+    rr(g, 10, 14, 236, 100, 50);
+    g.fillStyle = '#ff6f98';
+    g.fill();
+    g.lineWidth = 7;
+    g.strokeStyle = '#ffffff';
+    g.stroke();
+    g.fillStyle = '#ffffff';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = '700 58px Kanit, "Noto Sans Thai", sans-serif';
+    g.fillText('−' + STEP + '%', 128, 66);
+    return new THREE.CanvasTexture(c);
+  })();
+
+  var unitsRoot = new THREE.Group();
+  scene.add(unitsRoot);
+  var units = [];
+  var unitMeshes = [];
+  var elapsed = 0;
+
+  function clearUnits() {
+    unitsRoot.traverse(function (o) {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material && o.material.dispose && o.material.map !== labelTex) o.material.dispose();
+      else if (o.material && o.material.map === labelTex) o.material.dispose();
+    });
+    while (unitsRoot.children.length) unitsRoot.remove(unitsRoot.children[0]);
+    units.length = 0;
+    unitMeshes.length = 0;
+  }
+
+  function umat(u, color, rough) {
+    var m = new THREE.MeshStandardMaterial({ color: color, roughness: rough == null ? 0.6 : rough, metalness: 0 });
+    u.mats.push(m);
+    return m;
+  }
+  function uadd(u, geom, material, x, y, z) {
+    var mesh = new THREE.Mesh(geom, material);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.unit = u;
+    u.group.add(mesh);
+    unitMeshes.push(mesh);
+    return mesh;
+  }
+  function wedgeShape(r0, r1, a0, a1) {
+    var s = new THREE.Shape();
+    if (r0 <= 0) {
+      s.moveTo(0, 0);
+      s.lineTo(r1 * Math.cos(a0), r1 * Math.sin(a0));
+      s.absarc(0, 0, r1, a0, a1, false);
+      s.lineTo(0, 0);
+    } else {
+      s.moveTo(r0 * Math.cos(a0), r0 * Math.sin(a0));
+      s.lineTo(r1 * Math.cos(a0), r1 * Math.sin(a0));
+      s.absarc(0, 0, r1, a0, a1, false);
+      s.lineTo(r0 * Math.cos(a1), r0 * Math.sin(a1));
+      s.absarc(0, 0, r0, a1, a0, true);
+    }
+    return s;
+  }
+  function extrudeLayer(shape, depth, bevel, segs) {
+    var g = new THREE.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: segs, curveSegments: 8, steps: 1 });
+    g.rotateX(-Math.PI / 2);
+    return g;
+  }
+
+  function buildWedge(u, type) {
+    var i = u.index;
+    var a0 = i * STEP_ANGLE + GAP;
+    var a1 = (i + 1) * STEP_ANGLE - GAP;
+    var am = (i + 0.5) * STEP_ANGLE;
+    var dir = new THREE.Vector3(Math.cos(am), 0, -Math.sin(am));
+    var y = 0.14;
+    function layer(r0, r1, h, b, color, rough, segs) {
+      var g = extrudeLayer(wedgeShape(r0, r1, a0, a1), h, b, segs || 3);
+      var mesh = uadd(u, g, umat(u, color, rough), 0, y + b, 0);
+      y += h + 2 * b;
+      return mesh;
+    }
+    if (type === 'cake') {
+      layer(0, 2.45, 0.4, 0.03, 0xf2b872, 0.8);
+      layer(0, 2.5, 0.1, 0.03, 0xfff4e0, 0.5);
+      layer(0, 2.45, 0.4, 0.03, 0xf2b872, 0.8);
+      layer(0, 2.5, 0.08, 0.04, 0xffa6c1, 0.35);
+      var cherry = new THREE.SphereGeometry(0.19, 20, 16);
+      uadd(u, cherry, umat(u, 0xe63950, 0.25), 1.75 * Math.cos(am), y + 0.12, -1.75 * Math.sin(am));
+      var dot = new THREE.SphereGeometry(0.12, 14, 12);
+      [-0.1, 0.1].forEach(function (da) {
+        uadd(u, dot, umat(u, 0xffffff, 0.4), 2.2 * Math.cos(am + da), y + 0.05, -2.2 * Math.sin(am + da));
+      });
+      u.anchor.set(1.5 * Math.cos(am), y + 0.4, -1.5 * Math.sin(am));
+      u.away.copy(dir).multiplyScalar(2.4).add(new THREE.Vector3(0, 1.3, 0));
+    } else {
+      var dough = extrudeLayer(wedgeShape(1.25, 2.4, a0, a1), 0.3, 0.2, 5);
+      uadd(u, dough, umat(u, 0xe8b27a, 0.8), 0, 0.34, 0);
+      var icing = extrudeLayer(wedgeShape(1.2, 2.45, a0, a1), 0.06, 0.15, 4);
+      uadd(u, icing, umat(u, 0xff9fb8, 0.3), 0, 0.76, 0);
+      var sprinkleColors = [0xffffff, 0xffe27a, 0x7be0c3, 0x9ec5ff, 0xc89bff];
+      for (var s = 0; s < 5; s++) {
+        var rr0 = 1.5 + Math.random() * 0.75;
+        var th = a0 + (a1 - a0) * (0.15 + 0.7 * Math.random());
+        var sp = uadd(u, new THREE.BoxGeometry(0.26, 0.07, 0.07), umat(u, sprinkleColors[s % 5], 0.4), rr0 * Math.cos(th), 0.97, -rr0 * Math.sin(th));
+        sp.rotation.y = Math.random() * Math.PI;
+      }
+      u.anchor.set(1.8 * Math.cos(am), 1.0, -1.8 * Math.sin(am));
+      u.away.copy(dir).multiplyScalar(2.4).add(new THREE.Vector3(0, 1.3, 0));
+    }
+  }
+
+  var wrapColors = [0xffb7b2, 0xb8e6c9, 0xfff0a8, 0xd9c8ff];
+  function buildCupcake(u) {
+    var i = u.index;
+    var col = i % 5;
+    var row = Math.floor(i / 5);
+    var x = (col - 2) * 1.05;
+    var z = (row - 1.5) * 1.05;
+    u.home.set(x, 0.14, z);
+    u.cup = true;
+    uadd(u, new THREE.CylinderGeometry(0.34, 0.25, 0.42, 20), umat(u, wrapColors[(col + row) % 4], 0.7), 0, 0.21, 0);
+    var dome = uadd(u, new THREE.SphereGeometry(0.33, 20, 14), umat(u, 0xe8b27a, 0.85), 0, 0.44, 0);
+    dome.scale.set(1, 0.7, 1);
+    var t1 = new THREE.TorusGeometry(0.27, 0.1, 12, 26);
+    t1.rotateX(Math.PI / 2);
+    uadd(u, t1, umat(u, 0xff9fb8, 0.35), 0, 0.6, 0);
+    var t2 = new THREE.TorusGeometry(0.19, 0.09, 12, 24);
+    t2.rotateX(Math.PI / 2);
+    uadd(u, t2, umat(u, 0xff8fab, 0.35), 0, 0.74, 0);
+    uadd(u, new THREE.SphereGeometry(0.13, 16, 12), umat(u, 0xff7fa0, 0.35), 0, 0.86, 0);
+    uadd(u, new THREE.SphereGeometry(0.09, 16, 12), umat(u, 0xe63950, 0.25), 0, 1.0, 0);
+    var out = new THREE.Vector3(x, 0, z);
+    if (out.length() < 0.001) out.set(0, 0, 1);
+    out.normalize();
+    u.away.copy(out).multiplyScalar(0.9).add(new THREE.Vector3(0, 2.3, 0));
+    u.anchor.set(0, 1.0, 0);
+  }
+
+  function buildProduct() {
+    clearUnits();
+    var type = state.product;
+    plateRound.visible = type !== 'cupcake';
+    plateTray.visible = type === 'cupcake';
+    for (var i = 0; i < UNITS; i++) {
+      var u = {
+        index: i,
+        group: new THREE.Group(),
+        mats: [],
+        home: new THREE.Vector3(),
+        away: new THREE.Vector3(),
+        anchor: new THREE.Vector3(),
+        t: 0,
+        bornAt: elapsed + i * 0.035,
+        cup: false,
+        sprite: null
+      };
+      if (type === 'cupcake') buildCupcake(u); else buildWedge(u, type);
+      unitsRoot.add(u.group);
+      var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex, transparent: true, depthTest: false, opacity: 0 }));
+      sp.scale.set(1.3, 0.65, 1);
+      sp.renderOrder = 20;
+      sp.visible = false;
+      unitsRoot.add(sp);
+      u.sprite = sp;
+      units.push(u);
+    }
+  }
+
+  var hsLayer = $('hotspots');
+  var hotspots = [];
+  var tmpV = new THREE.Vector3();
+
+  function unitWorld(u, lift) {
+    return new THREE.Vector3().copy(u.group.position).add(u.anchor).add(new THREE.Vector3(0, lift, 0));
+  }
+  function avgUnits(filterFn, lift) {
+    var sum = new THREE.Vector3();
+    var cnt = 0;
+    units.forEach(function (u) {
+      if (filterFn(u)) { sum.add(unitWorld(u, 0)); cnt++; }
+    });
+    if (!cnt) return null;
+    sum.multiplyScalar(1 / cnt);
+    sum.y += lift;
+    return sum;
+  }
+
+  function addHotspot(key, emoji, label, getPos) {
+    var el = document.createElement('button');
+    el.className = 'hs';
+    el.type = 'button';
+    el.setAttribute('aria-label', label);
+    el.innerHTML = emoji + '<span class="lbl">' + label + '</span>';
+    el.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openCard(key);
+    });
+    hsLayer.appendChild(el);
+    hotspots.push({ key: key, el: el, getPos: getPos });
+  }
+
+  addHotspot('sign', '🏷️', 'ป้ายราคา', function () { return new THREE.Vector3(-5.0, 4.9, 2.7); });
+  addHotspot('discount', '🎁', 'ส่วนลด', function () {
+    var k = calc();
+    if (k.n <= 0) return null;
+    return avgUnits(function (u) { return u.index < k.n; }, 1.5);
+  });
+  addHotspot('paid', '✅', 'ส่วนที่ต้องจ่าย', function () {
+    var k = calc();
+    if (k.n >= UNITS) return null;
+    return avgUnits(function (u) { return u.index >= k.n; }, 1.9);
+  });
+  addHotspot('bear', '🐻', 'พี่หมีเบเกอร์', function () { return new THREE.Vector3(5.0, 4.5, 2.9); });
+
+  var card = $('card');
+  var cardState = { key: null, idx: 0 };
+
+  function cardContent() {
+    var k = calc();
+    var key = cardState.key;
+    if (key === 'sign') {
+      return {
+        icon: '🏷️', title: 'ป้ายราคา: ราคาเดิมกับส่วนลด',
+        body: 'ราคาเดิม <b>' + nf(state.price) + ' บาท</b> ติดป้ายลด <b>' + state.discount + '%</b> หมายความว่า ทุก 100 ส่วนของราคาเดิม ร้านลดให้ ' + state.discount + ' ส่วน' +
+          '<div class="eq">ส่วนลด = (' + nf(state.price) + ' × ' + state.discount + ') ÷ 100 = ' + nf(k.d) + ' บาท</div>',
+        act: ''
+      };
+    }
+    if (key === 'discount') {
+      if (k.n <= 0) {
+        return { icon: '🎁', title: 'ส่วนที่ลดราคา', body: 'ตอนนี้ยังไม่มีส่วนลด (0%) ลองเลื่อนแถบ <b>เปอร์เซ็นต์ส่วนลด</b> เพื่อดูชิ้นขนมลอยออกมา', act: '' };
+      }
+      return {
+        icon: '🎁', title: 'ชิ้นที่ลอยออกมา = ส่วนที่ลดให้',
+        body: 'ขนม <b>' + k.n + ' ชิ้น</b> จากทั้งหมด ' + UNITS + ' ชิ้น คิดเป็น ' + k.n + ' × ' + STEP + ' = <b>' + state.discount + '%</b> ของราคาเดิม' +
+          '<div class="eq">ชิ้นละ ' + STEP + '% = ' + nf(state.price * STEP / 100) + ' บาท → ส่วนลดรวม ' + nf(k.d) + ' บาท</div>',
+        act: ''
+      };
+    }
+    if (key === 'paid') {
+      var rest = UNITS - k.n;
+      return {
+        icon: '✅', title: 'ชิ้นที่เหลือ = ส่วนที่ต้องจ่าย',
+        body: 'เหลือขนม <b>' + rest + ' ชิ้น</b> คิดเป็น <b>' + (100 - state.discount) + '%</b> ของราคาเดิม' +
+          '<div class="eq">จ่ายจริง = ' + nf(state.price) + ' − ' + nf(k.d) + ' = ' + nf(k.paid) + ' บาท</div>' +
+          'ทางลัด: (' + nf(state.price) + ' × ' + (100 - state.discount) + ') ÷ 100 = <b>' + nf(k.paid) + ' บาท</b>',
+        act: ''
+      };
+    }
+    if (key === 'bear') {
+      return {
+        icon: '🐻', title: 'สวัสดีครับ พี่หมีเบเกอร์เอง!',
+        body: 'วันนี้ Pawy Bakery ลดราคาพิเศษ! ลองเลื่อน <b>ราคาเดิม</b> และ <b>% ส่วนลด</b> แล้วสังเกตว่า ' +
+          'ชิ้นขนมลอยออกกี่ชิ้น ส่วนลดกี่บาท และต้องจ่ายจริงเท่าไร<br>เคล็ดลับ: หมุนกล้องรอบโต๊ะได้ด้วยการคลิกลากนะครับ',
+        act: '<button class="btn" data-act="goquiz" type="button">ไปทำแบบทดสอบ 📝</button>'
+      };
+    }
+    if (key === 'slice') {
+      var i = cardState.idx;
+      var isDisc = i < k.n;
+      var val = state.price * STEP / 100;
+      return {
+        icon: PRODUCTS[state.product].emoji, title: 'ชิ้นที่ ' + (i + 1) + ' · ' + STEP + '% ของราคา',
+        body: 'ชิ้นนี้คิดเป็น <b>' + STEP + '%</b> ของราคาเดิม' +
+          '<div class="eq">(' + nf(state.price) + ' × ' + STEP + ') ÷ 100 = ' + nf(val) + ' บาท</div>' +
+          'สถานะ: ' + (isDisc ? '🎁 <b>ถูกลดราคา</b> (ประหยัดได้)' : '✅ <b>ต้องจ่ายตามปกติ</b>'),
+        act: '<button class="btn" data-act="setdisc" data-v="' + ((i + 1) * STEP) + '" type="button">ลดให้ถึงชิ้นนี้ (' + ((i + 1) * STEP) + '%)</button>' +
+          '<button class="btn ghost" data-act="setdisc" data-v="0" type="button">ล้างส่วนลด</button>'
+      };
+    }
+    return { icon: '💡', title: '', body: '', act: '' };
+  }
+
+  function renderCard() {
+    var c = cardContent();
+    $('cIcon').textContent = c.icon;
+    $('cTitle').textContent = c.title;
+    $('cBody').innerHTML = c.body;
+    $('cAct').innerHTML = c.act;
+    hotspots.forEach(function (h) { h.el.classList.toggle('on', h.key === cardState.key); });
+  }
+  function openCard(key, idx) {
+    var changed = cardState.key !== key || cardState.idx !== (idx || 0) || !card.classList.contains('show');
+    cardState.key = key;
+    cardState.idx = idx || 0;
+    renderCard();
+    if (changed) {
+      card.classList.remove('show');
+      void card.offsetWidth;
+      card.classList.add('show');
+    }
+  }
+  function closeCard() {
+    card.classList.remove('show');
+    cardState.key = null;
+    hotspots.forEach(function (h) { h.el.classList.remove('on'); });
+  }
+  $('cClose').addEventListener('click', closeCard);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeCard(); });
+  $('cAct').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.act === 'setdisc') setState({ discount: parseInt(b.dataset.v, 10) });
+    if (b.dataset.act === 'goquiz') setTab('quiz');
+  });
+
+  function tween(el, to) {
+    var from = parseFloat(el.dataset.v || '0');
+    el.dataset.v = String(to);
+    cancelAnimationFrame(el._raf);
+    var t0 = performance.now();
+    var dur = 450;
+    function step(now) {
+      var p = Math.min(1, (now - t0) / dur);
+      var e = 1 - Math.pow(1 - p, 3);
+      el.textContent = n2(from + (to - from) * e);
+      if (p < 1) el._raf = requestAnimationFrame(step);
+    }
+    step(t0);
+  }
+
+  var priceRange = $('priceRange');
+  var discRange = $('discRange');
+  function setFill(input) {
+    var pct = (input.value - input.min) / (input.max - input.min) * 100;
+    input.style.setProperty('--fill', pct + '%');
+  }
+
+  function bearText(k) {
+    var d = state.discount;
+    if (d === 0) return 'ยังไม่มีส่วนลดเลยนะ ลองเลื่อนแถบ <b>ส่วนลด</b> ดู แล้วสังเกตชิ้นขนมที่ลอยออกมาในฉาก 3D!';
+    if (d === 100) return 'ลด <b>100%</b> = ฟรีทั้งหมดเลย! แต่พี่หมีจะเจ๊งแน่ๆ 😅';
+    if (d === 50) return '<b>50%</b> คือครึ่งราคาพอดี หรือ 50 ใน 100 ส่วน ขนมลอยออกมาครึ่งหนึ่ง (10 ชิ้น) จ่ายจริง <b>' + nf(k.paid) + ' บาท</b>';
+    return 'ลด <b>' + d + '%</b> = ขนม <b>' + k.n + ' ชิ้น</b> จาก 20 ชิ้นลอยออกมา (ชิ้นละ 5%) ประหยัด <b>' + nf(k.d) + ' บาท</b> จ่ายจริง <b>' + nf(k.paid) + ' บาท</b>';
+  }
+
+  function syncUI() {
+    var k = calc();
+    priceRange.value = state.price;
+    discRange.value = state.discount;
+    setFill(priceRange);
+    setFill(discRange);
+    $('priceVal').textContent = nf(state.price);
+    $('discVal').textContent = state.discount;
+    tween($('rDisc'), k.d);
+    tween($('rPaid'), k.paid);
+    var paidPct = 100 - state.discount;
+    $('barPaid').style.width = paidPct + '%';
+    $('barDisc').style.width = state.discount + '%';
+    $('barPaidT').textContent = paidPct >= 18 ? 'จ่ายจริง ' + paidPct + '%' : (paidPct > 0 ? paidPct + '%' : '');
+    $('barDiscT').textContent = state.discount >= 18 ? 'ส่วนลด ' + state.discount + '%' : (state.discount > 0 ? state.discount + '%' : '');
+    $('unitPct').textContent = STEP;
+    $('unitVal').textContent = nf(state.price * STEP / 100);
+    $('f1v').textContent = '(' + nf(state.price) + ' × ' + state.discount + ') ÷ 100 = ' + nf(k.d) + ' บาท';
+    $('f2v').textContent = nf(state.price) + ' − ' + nf(k.d) + ' = ' + nf(k.paid) + ' บาท';
+    $('f3v').textContent = '(' + nf(k.d) + ' ÷ ' + nf(state.price) + ') × 100 = ' + state.discount + '%';
+    $('bearSay').innerHTML = bearText(k);
+    document.querySelectorAll('#chips .chip').forEach(function (c) {
+      c.classList.toggle('active', c.dataset.p === state.product);
+    });
+    drawSign();
+    if (cardState.key) renderCard();
+  }
+
+  function setState(part) {
+    var prod = state.product;
+    Object.keys(part).forEach(function (key) { state[key] = part[key]; });
+    if (state.product !== prod) buildProduct();
+    syncUI();
+  }
+
+  priceRange.addEventListener('input', function () { setState({ price: parseInt(priceRange.value, 10) }); });
+  discRange.addEventListener('input', function () { setState({ discount: parseInt(discRange.value, 10) }); });
+  $('chips').addEventListener('click', function (e) {
+    var b = e.target.closest('.chip');
+    if (b) setState({ product: b.dataset.p });
+  });
+  document.querySelectorAll('.preset').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var p = b.dataset.pr.split(',');
+      setState({ price: parseInt(p[0], 10), discount: parseInt(p[1], 10) });
+    });
+  });
+  document.querySelectorAll('[data-scene]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var p = b.dataset.scene.split(',');
+      setState({ price: parseInt(p[0], 10), discount: parseInt(p[1], 10) });
+      setTab('lab');
+    });
+  });
+
+  function setTab(name) {
+    document.querySelectorAll('.tab').forEach(function (t) {
+      t.setAttribute('aria-selected', t.dataset.tab === name ? 'true' : 'false');
+    });
+    document.querySelectorAll('.pane').forEach(function (p) {
+      p.classList.toggle('active', p.id === 'pane-' + name);
+    });
+    document.querySelector('.panel-body').scrollTop = 0;
+  }
+  document.querySelectorAll('.tab').forEach(function (t) {
+    t.addEventListener('click', function () { setTab(t.dataset.tab); });
+  });
+
+  var QUIZ = [
+    {
+      text: 'คัพเค้กสตรอว์เบอร์รีติดป้ายราคา <b>150 บาท</b> ร้าน Pawy Bakery ลดราคา <b>20%</b> น้องแป้งต้องจ่ายเงินซื้อคัพเค้กชิ้นนี้กี่บาท?',
+      options: ['30 บาท', '120 บาท', '130 บาท', '140 บาท'],
+      correct: 1,
+      explain: 'ส่วนลด = (150 × 20) ÷ 100 = <b>30 บาท</b><br>จ่ายจริง = 150 − 30 = <b>120 บาท</b><br><small>ทางลัด: จ่าย 80% → (150 × 80) ÷ 100 = 120</small>',
+      scene: { product: 'cupcake', price: 150, discount: 20 }
+    },
+    {
+      text: 'เค้กวันเกิดก้อนใหญ่ราคา <b>800 บาท</b> พี่หมีให้ส่วนลด <b>160 บาท</b> พี่หมีลดราคาเค้กก้อนนี้คิดเป็น <b>กี่เปอร์เซ็นต์</b> ของราคาเดิม?',
+      options: ['15%', '20%', '25%', '30%'],
+      correct: 1,
+      explain: 'เปอร์เซ็นต์ส่วนลด = (ส่วนลด ÷ ราคาเดิม) × 100<br>แทนค่า: (160 ÷ 800) × 100 = <b>20%</b>',
+      scene: { product: 'cake', price: 800, discount: 20 }
+    },
+    {
+      text: 'ร้านช็อกโกแลตติดป้าย "ลดราคาพิเศษ <b>30%</b>" คุณแม่จ่ายซื้อคุกกี้ในราคาที่ลดแล้ว <b>350 บาท</b> <b>ราคาเดิมก่อนลด</b> ของคุกกี้กล่องนี้คือเท่าไร?',
+      options: ['455 บาท', '485 บาท', '500 บาท', '550 บาท'],
+      correct: 2,
+      explain: 'ลด 30% แปลว่าจ่าย 70% ของราคาเดิม<br>ราคาเดิม = (350 × 100) ÷ 70 = <b>500 บาท</b><br><small>ตรวจสอบ: 500 × 70 ÷ 100 = 350 ✓</small>',
+      scene: { product: 'donut', price: 500, discount: 30 }
+    }
+  ];
+  var LETTERS = ['ก', 'ข', 'ค', 'ง'];
+  var quiz = { i: 0, score: 0, picked: null, results: [] };
+  var quizBox = $('quizBox');
+
+  function renderQuiz() {
+    var html = '';
+    var dots = '';
+    for (var d = 0; d < QUIZ.length; d++) {
+      var cls = d === quiz.i ? 'cur' : (quiz.results[d] === true ? 'ok' : (quiz.results[d] === false ? 'no' : ''));
+      dots += '<i class="' + cls + '"></i>';
+    }
+    if (quiz.i >= QUIZ.length) {
+      var s = quiz.score;
+      var msg = s === 3 ? ['🏆', 'เก่งมาก! เต็มสามคะแนน', 'น้องเข้าใจเรื่องร้อยละและส่วนลดอย่างแม่นยำ พี่หมีภูมิใจสุดๆ!'] :
+        s === 2 ? ['🌟', 'ยอดเยี่ยม!', 'ถูกไปสองข้อ ลองย้อนดูสูตรอีกนิดแล้วทำใหม่ จะเต็มแน่นอน'] :
+        s === 1 ? ['💪', 'สู้ต่ออีกนิด!', 'ลองไปเล่นห้องทดลองและอ่านสูตรอีกรอบ แล้วกลับมาทำใหม่นะ'] :
+        ['🧁', 'ไม่เป็นไรนะ ลองใหม่ได้เสมอ', 'ไปเล่นในห้องทดลองดูชิ้นขนมลอยออกมา แล้วจะเข้าใจเอง'];
+      html = '<div class="q-prog"><div class="q-dots">' + dots + '</div><span class="q-count">เสร็จแล้ว</span></div>' +
+        '<div class="result"><div class="big">' + msg[0] + '</div><h3>' + msg[1] + '</h3><div class="score">' + s + ' / ' + QUIZ.length + '</div><p>' + msg[2] + '</p>' +
+        '<div class="fb-act" style="justify-content:center"><button class="btn" data-qa="restart" type="button">🔁 ทำแบบทดสอบใหม่</button><button class="btn ghost" data-qa="lab" type="button">🧪 กลับไปห้องทดลอง</button></div></div>';
+      quizBox.innerHTML = html;
+      return;
+    }
+    var q = QUIZ[quiz.i];
+    var answered = quiz.picked !== null;
+    html += '<div class="q-prog"><div class="q-dots">' + dots + '</div><span class="q-count">ข้อ ' + (quiz.i + 1) + ' / ' + QUIZ.length + '</span></div>';
+    html += '<div class="q-text">' + q.text + '</div><div class="opts">';
+    q.options.forEach(function (o, idx) {
+      var c = 'opt';
+      if (answered) {
+        if (idx === q.correct) c += ' ok';
+        else if (idx === quiz.picked) c += ' no';
+      }
+      html += '<button class="' + c + '" data-qa="pick" data-i="' + idx + '" type="button"' + (answered ? ' disabled' : '') + '><span class="l">' + LETTERS[idx] + '</span><span>' + o + '</span></button>';
+    });
+    html += '</div>';
+    if (answered) {
+      var ok = quiz.picked === q.correct;
+      html += '<div class="fb ' + (ok ? 'ok' : 'no') + '"><h4>' + (ok ? '✅ ถูกต้อง เก่งมาก!' : '❌ ยังไม่ถูก คำตอบคือข้อ ' + LETTERS[q.correct]) + '</h4>' + q.explain +
+        '<div class="fb-act"><button class="btn ghost" data-qa="scene" type="button">🎬 ดูในฉาก 3D</button><button class="btn" data-qa="next" type="button">' + (quiz.i === QUIZ.length - 1 ? 'ดูผลคะแนน 🏁' : 'ข้อถัดไป ➜') + '</button></div></div>';
+    }
+    quizBox.innerHTML = html;
+  }
+
+  function confetti() {
+    var items = ['🎉', '🧁', '🍩', '⭐', '🎂', '✨', '🍪'];
+    for (var i = 0; i < 36; i++) {
+      var s = document.createElement('span');
+      s.className = 'confetti';
+      s.textContent = items[i % items.length];
+      s.style.left = Math.random() * 100 + 'vw';
+      s.style.animationDuration = 2.2 + Math.random() * 2 + 's';
+      s.style.animationDelay = Math.random() * 0.6 + 's';
+      s.style.fontSize = 18 + Math.random() * 20 + 'px';
+      document.body.appendChild(s);
+      setTimeout(function (el) { el.remove(); }, 5200, s);
+    }
+  }
+
+  quizBox.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    var act = b.dataset.qa;
+    if (act === 'pick' && quiz.picked === null) {
+      var idx = parseInt(b.dataset.i, 10);
+      var q = QUIZ[quiz.i];
+      quiz.picked = idx;
+      var ok = idx === q.correct;
+      quiz.results[quiz.i] = ok;
+      if (ok) quiz.score++;
+      setState(q.scene);
+      renderQuiz();
+    } else if (act === 'scene') {
+      setState(QUIZ[quiz.i].scene);
+    } else if (act === 'next') {
+      quiz.i++;
+      quiz.picked = null;
+      renderQuiz();
+      if (quiz.i >= QUIZ.length && quiz.score === QUIZ.length) confetti();
+    } else if (act === 'restart') {
+      quiz = { i: 0, score: 0, picked: null, results: [] };
+      renderQuiz();
+    } else if (act === 'lab') {
+      setTab('lab');
+    }
+  });
+
+  var raycaster = new THREE.Raycaster();
+  var ptr = new THREE.Vector2();
+  function setPointer(e) {
+    var r = canvas.getBoundingClientRect();
+    ptr.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+    ptr.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  }
+  function hitTest() {
+    raycaster.setFromCamera(ptr, camera);
+    var hits = raycaster.intersectObjects(unitMeshes.concat(bearMeshes), false);
+    return hits.length ? hits[0].object : null;
+  }
+  var downPos = null;
+  canvas.addEventListener('pointerdown', function (e) { downPos = { x: e.clientX, y: e.clientY }; });
+  canvas.addEventListener('pointerup', function (e) {
+    if (!downPos) return;
+    var dx = e.clientX - downPos.x, dy = e.clientY - downPos.y;
+    downPos = null;
+    if (Math.sqrt(dx * dx + dy * dy) > 6 || e.button !== 0) return;
+    setPointer(e);
+    var o = hitTest();
+    if (!o) return;
+    if (o.userData.unit) openCard('slice', o.userData.unit.index);
+    else if (o.userData.bear) openCard('bear');
+  });
+  var hoverEvt = null;
+  canvas.addEventListener('pointermove', function (e) {
+    if (e.buttons === 0) hoverEvt = e;
+  });
+  canvas.addEventListener('pointerleave', function () { hoverEvt = null; });
+
+  var camTween = null;
+  function defaultCam() {
+    var aspect = camera.aspect;
+    var tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    var dist = Math.min(26, Math.max(12.5, 6.8 / (tanHalf * aspect)));
+    var dir = new THREE.Vector3(0, 0.5, 0.87).normalize();
+    return { pos: dir.multiplyScalar(dist).add(new THREE.Vector3(0, 0.9, 0)), target: new THREE.Vector3(0, 0.9, 0) };
+  }
+  function resetCamera(animate) {
+    var d = defaultCam();
+    if (!animate) {
+      camera.position.copy(d.pos);
+      controls.target.copy(d.target);
+      controls.update();
+      return;
+    }
+    camTween = {
+      t0: elapsed, dur: 0.9,
+      fp: camera.position.clone(), tp: d.pos,
+      ft: controls.target.clone(), tt: d.target
+    };
+  }
+  $('btnReset').addEventListener('click', function () { resetCamera(true); });
+  $('btnSpin').addEventListener('click', function () {
+    controls.autoRotate = !controls.autoRotate;
+    this.classList.toggle('on', controls.autoRotate);
+  });
+  controls.addEventListener('start', function () { camTween = null; });
+
+  function resize() {
+    var w = stage.clientWidth;
+    var h = stage.clientHeight;
+    if (!w || !h) return;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  var firstResize = true;
+  function onResize() {
+    var wasDefault = firstResize;
+    resize();
+    if (wasDefault) { resetCamera(false); firstResize = false; }
+  }
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(onResize).observe(stage);
+  window.addEventListener('resize', onResize);
+
+  var clock = new THREE.Clock();
+  var shown = false;
+  var tmpClamp = new THREE.Vector3();
+
+  function frame() {
+    requestAnimationFrame(frame);
+    var dt = Math.min(clock.getDelta(), 0.05);
+    elapsed += dt;
+    var k = calc();
+
+    for (var i = 0; i < units.length; i++) {
+      var u = units[i];
+      var target = u.index < k.n ? 1 : 0;
+      u.t += (target - u.t) * (1 - Math.exp(-dt * 5));
+      var age = Math.max(0, elapsed - u.bornAt);
+      var pop = Math.min(1, age / 0.55);
+      var s = pop <= 0 ? 0.0001 : easeOutBack(pop);
+      s *= 1 - 0.08 * u.t;
+      var bob = Math.sin(elapsed * 2.2 + u.index) * 0.14 * u.t;
+      u.group.position.set(
+        u.home.x + u.away.x * u.t,
+        u.home.y + u.away.y * u.t + bob,
+        u.home.z + u.away.z * u.t
+      );
+      u.group.scale.setScalar(Math.max(s, 0.0001));
+      if (u.cup) u.group.rotation.y += dt * 2.4 * u.t;
+      var tr = u.t > 0.01;
+      var op = 1 - 0.5 * u.t;
+      for (var m = 0; m < u.mats.length; m++) {
+        var mat = u.mats[m];
+        if (mat.transparent !== tr) { mat.transparent = tr; mat.needsUpdate = true; }
+        mat.opacity = op;
+        mat.emissive.setRGB(0.42 * u.t, 0.1 * u.t, 0.2 * u.t);
+      }
+      if (u.sprite) {
+        u.sprite.visible = u.t > 0.05 && pop > 0.5;
+        u.sprite.material.opacity = Math.min(1, u.t * 1.3);
+        u.sprite.position.copy(u.group.position).add(u.anchor);
+        u.sprite.position.y += 0.95;
+      }
+    }
+
+    armRPivot.rotation.z = 2.55 + Math.sin(elapsed * 5) * 0.32;
+    armLPivot.rotation.z = -0.25 + Math.sin(elapsed * 1.5) * 0.06;
+    bear.position.y = Math.sin(elapsed * 2) * 0.05;
+    spark.rotation.y += dt * 0.03;
+    spark.position.y = Math.sin(elapsed * 0.6) * 0.3;
+
+    if (camTween) {
+      var p = Math.min(1, (elapsed - camTween.t0) / camTween.dur);
+      var e = 1 - Math.pow(1 - p, 3);
+      camera.position.lerpVectors(camTween.fp, camTween.tp, e);
+      controls.target.lerpVectors(camTween.ft, camTween.tt, e);
+      if (p >= 1) camTween = null;
+    }
+
+    controls.update();
+
+    tmpClamp.copy(controls.target);
+    controls.target.x = Math.max(-5, Math.min(5, controls.target.x));
+    controls.target.z = Math.max(-5, Math.min(5, controls.target.z));
+    controls.target.y = Math.max(0, Math.min(3.5, controls.target.y));
+    if (!tmpClamp.equals(controls.target)) {
+      camera.position.add(controls.target).sub(tmpClamp);
+    }
+
+    if (hoverEvt) {
+      setPointer(hoverEvt);
+      canvas.style.cursor = hitTest() ? 'pointer' : 'grab';
+      hoverEvt = null;
+    }
+
+    renderer.render(scene, camera);
+
+    var w = stage.clientWidth, h = stage.clientHeight;
+    for (var j = 0; j < hotspots.length; j++) {
+      var hs = hotspots[j];
+      var wp = hs.getPos();
+      if (!wp) { hs.el.classList.add('hide'); continue; }
+      tmpV.copy(wp).project(camera);
+      if (tmpV.z > 1 || tmpV.z < -1) { hs.el.classList.add('hide'); continue; }
+      hs.el.classList.remove('hide');
+      var x = (tmpV.x * 0.5 + 0.5) * w;
+      var y = (-tmpV.y * 0.5 + 0.5) * h;
+      hs.el.style.transform = 'translate3d(' + (x - 20).toFixed(1) + 'px,' + (y - 20).toFixed(1) + 'px,0)';
+    }
+
+    if (!shown) {
+      shown = true;
+      setTimeout(function () { $('loading').classList.add('done'); }, 250);
+    }
+  }
+
+  buildProduct();
+  syncUI();
+  renderQuiz();
+  onResize();
+  if (document.fonts && document.fonts.load) {
+    Promise.all([
+      document.fonts.load('400 30px Kanit', 'ราคาเดิม'),
+      document.fonts.load('600 30px Kanit', 'ราคาเดิม'),
+      document.fonts.load('700 30px Kanit', 'ราคาเดิม')
+    ]).then(drawSign, drawSign);
+  }
+  setTimeout(function () { openCard('bear'); }, 1600);
+  frame();
+})();
+</script>
+</body>
+</html>
